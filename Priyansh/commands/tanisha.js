@@ -16,7 +16,7 @@ module.exports.config = {
 
 // ✅ আপনার OpenAI API KEY এখানে দিন
 const openai = new OpenAI({
-  apiKey: "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"
+  apiKey: "RgZbGn9MZolvf2whpnZkn5zBNWM7zeenZeI-4onBdpM7bftmD12ICGMuQOCAQqPJecA"
 });
 
 // ✅ Toggle file path
