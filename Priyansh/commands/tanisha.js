@@ -1,7 +1,118 @@
-Z+!j;{-:�ުz^{-~ުy{-aꮊjfۥyilrߊ	ڙZ+!j*'Mb@(A9$֭y^ب~,\�e&ݶ~=ȨG(ft&z
-+ɨ֧Z}(Wh{7zp�
-(hڊw:�O-1Zo-$,>kazbEhs#dzآdCjbtVcrzli1%ْ~sՌ7'L=v !
-%�	^~)^ar WWثZ+!i: W}+-,r WW
-b䲝h	^)^%#Z({gbxM'ZR8ZǟtXy,r WW+z֭۫jZ(rبǭMn0+^)^K)ܶ bR8-)n{o}(fvjWƚ+bz'a 9Ơx޽rjyKh.&z'רߊw%׬^nvǧtǬZ+!j߶i,jǭM׫z۫b1,jjxu'i,jҙ�ڝ^jWƚ+Z^2Ʃޞ,z{-i,jǧu
-ޞ؟nrڞ+!hz۫ܢi{-rgl]z{ĲZv*jgi)jc)ثrjwlabvyɝWrjwKb}+-,qɝZ%uܢiv*wW^f}ަVz;{-,jܭ0z(]zל*&݉Ơz)ܖ^gw%׬ny"rH,jnu&zr[za+z۫))މƠz)ܖ^jbx,jnu+z۫z,jnu&zr[zkk'nyڙߢ(\rjwKb}ɝzr[z&vܙ޶eru^rШfv'( z(\ڶZw&vh׫'߱bwڶ(\i(v^ꮊڶ޶rjwLۥzjRǫrvy,z zZ,z׫ ?:�jШ^*'�{-){k^\jezب+y^^
-m>))۫nƠz2צrz{Sjx'+ykWܢ{^ڙw)hם-zj^n<'ަ\zhǜz&z(ק'zrnvǧtǬekyHg 7^rW+M+zgnvǧtǬMt
+// tanisha.js
+const OpenAI = require("openai");
+const fs = require("fs");
+const path = require("path");
+
+module.exports.config = {
+  name: "tanisha",
+  version: "2.0.0",
+  credits: "RAKIB BOSS & Updated",
+  description: "Prefix chara AI gf reply with command trigger & on/off",
+  hasPermssion: 0,
+  commandCategory: "ai",
+  usages: "tanisha on/off",
+  cooldowns: 3
+};
+
+// ✅ আপনার OpenAI API KEY এখানে দিন
+const openai = new OpenAI({
+  apiKey: "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"
+});
+
+// ✅ Toggle file path
+const toggleFile = __dirname + "/tanishaToggle.json";
+
+if (!fs.existsSync(toggleFile)) {
+  fs.writeFileSync(toggleFile, JSON.stringify({ status: "on" }, null, 2));
+}
+
+function isTanishaOn() {
+  const data = JSON.parse(fs.readFileSync(toggleFile, "utf8"));
+  return data.status === "on";
+}
+
+function setTanisha(status) {
+  fs.writeFileSync(toggleFile, JSON.stringify({ status }, null, 2));
+}
+
+// ✅ on/off command
+module.exports.run = ({ api, event, args }) => {
+  const { threadID, messageID } = event;
+  const mode = args[0]?.toLowerCase();
+
+  if (!mode || !["on", "off"].includes(mode)) {
+    return api.sendMessage("🔁 ব্যবহার: tanisha on / tanisha off", threadID, messageID);
+  }
+
+  setTanisha(mode);
+  return api.sendMessage(`✅ Tanisha এখন ${mode === "on" ? "চালু" : "বন্ধ"} করা হলো!`, threadID, messageID);
+};
+
+// ✅ Smart AI Handler
+module.exports.handleEvent = async ({ api, event, Users }) => {
+  const { threadID, messageID, senderID, body } = event;
+  if (!body || !isTanishaOn()) return;
+
+  // বটের অন দ্য ফ্লাই কমান্ড ফোল্ডার চেক (commands বা cmds)
+  const cmdsFolder = fs.existsSync(path.join(__dirname, "..", "commands")) 
+    ? path.join(__dirname, "..", "commands") 
+    : path.join(__dirname, "..", "cmds");
+
+  let commandList = [];
+  if (fs.existsSync(cmdsFolder)) {
+    commandList = fs.readdirSync(cmdsFolder).map(f => f.replace(".js", ""));
+  }
+
+  const message = body.toLowerCase();
+
+  const detectCommand = () => {
+    if (message.includes("কিক") && message.includes("দাও")) return "kick";
+    if (message.includes("ছবি") || message.includes("photo")) return "imagine";
+    if (message.includes("ক্যাপশন")) return "caption";
+    if (message.includes("ভিডিও")) return "video";
+    if (message.includes("নামাজ") || message.includes("prayer")) return "namaz";
+    for (const cmd of commandList) {
+      if (cmd !== "tanisha" && message.includes(cmd)) return cmd;
+    }
+    return null;
+  };
+
+  const trigger = detectCommand();
+  if (trigger) {
+    const cmdPath = path.join(cmdsFolder, `${trigger}.js`);
+    if (fs.existsSync(cmdPath)) {
+      const commandModule = require(cmdPath);
+      return commandModule.run({ api, event, Users });
+    }
+  }
+
+  try {
+    const name = await Users.getNameUser(senderID);
+
+    // 🤖 আপডেট করা OpenAI Chat Completion API
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini", // অথবা "gpt-3.5-turbo"
+      messages: [
+        {
+          role: "system",
+          content: "তুমি এখন Tanisha — একটা স্মার্ট, সুন্দর, কিউট, মেয়েলি AI। তুমি বাংলা ভাষায় খুব স্বাভাবিক, নরম স্বরে কথা বলো। robotic না, একদম real মানুষের মতো মিষ্টি ভঙ্গিতে রিপ্লাই দাও।"
+        },
+        {
+          role: "user",
+          content: `${name} বলেছে: ${body}`
+        }
+      ],
+      max_tokens: 150,
+      temperature: 0.85,
+    });
+
+    const reply = response.choices[0].message.content.trim();
+    if (reply) {
+      return api.sendMessage(reply, threadID, messageID);
+    }
+
+  } catch (e) {
+    console.error("Tanisha error:", e.message);
+    return api.sendMessage("😥 Tanisha একটু হ্যাং করছে, একটু পর আবার ট্রাই করো...", threadID);
+  }
+};
